@@ -1,0 +1,20 @@
+
+This mod provides an alternative procedure to generate
+the source and header files required to build QLA.
+
+It bundles the 28,288 sources files, for all precision
+& Nc (colour) combinations, into less than 300 files.
+
+Using information in listing/qla.timing.info it also determines
+whether or not to turn on vectorization which is on by default
+in GCC at optimization level -O3.
+
+Both measures contribute to the reduced compilation time.
+
+The makefiles supplied with the official QDP/C distribution
+have NOT been modified to work with mod-bundle.
+
+Run mod-bundle/util/example.sh to install.
+
+PS Remember to set GTAR=gtar GSED=gsed where necessary.
+

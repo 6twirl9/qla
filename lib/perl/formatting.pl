@@ -29,6 +29,7 @@ use vars qw/ $pointer_pfx /;
 use vars qw/ @disjoint_list /;
 use vars qw/ $tab /;
 use vars qw/ $header @headers /;
+use vars qw/ $header_done $target_original /;
 
 ######################################################################
 
@@ -190,11 +191,30 @@ sub print_close_iter_list {
 # Source file handling
 #--------------------------------------------------
 sub open_src_file {
-    my($filename) = "$c_source_path/$def{'src_filename'}";
 
-    open(QLA_SRC,">$filename") || 
+  if( defined $ENV{MOD_BUNDLE} )
+  {
+   my($filename) = "$c_source_path/$target_original.c";
+
+   if( $header_done == 0 )
+   {
+    open(QLA_SRC,">$filename") || die "Can't open $filename\n";
+   }
+   else
+   {
+    open(QLA_SRC,">>$filename") || die "Can't open $filename\n";
+   }
+  }
+  else
+  {
+   my($filename) = "$c_source_path/$def{'src_filename'}";
+
+   open(QLA_SRC,">$filename") || 
 	die "Can't open $filename\n";
+  }
+
 }
+
 
 sub close_src_file {
     close(QLA_SRC);
@@ -210,11 +230,34 @@ sub print_function_def {
     @indent = ();
     $tab = "  ";
 
+  if( defined $ENV{MOD_BUNDLE} )
+  {
+   $declaration = $def{'declaration'} ;
+
+   my @d ;
+   map { push @d, [split "_",$_] } ( $def{func_name}, ( $def{src_filename} =~ s|.c$||r ) ) ;
+   printf "MANGLE: %64s %64s | %s\n", $def{func_name}, ( $def{src_filename} =~ s|.c$||r )
+    , join(" ",map { $d[0]->[$_] . " -> " . $d[1]->[$_] } grep { $d[0]->[$_] ne $d[1]->[$_]}0..$#{$d[0]})
+   ;
+
+   if( $header_done == 0 )
+   {
+    foreach $header ( @headers ){
+	print QLA_SRC @indent,"#include $header\n";
+    }
+    $header_done=1 ;
+   }
+    print QLA_SRC @indent,"\n";
+    print QLA_SRC @indent,"/**************** FUNC_NAME $def{'func_name'}.c ********************/\n";
+  }
+  else
+  {
     print QLA_SRC @indent,"/**************** $def{'func_name'}.c ********************/\n";
     print QLA_SRC @indent,"\n";
     foreach $header ( @headers ){
 	print QLA_SRC @indent,"#include $header\n";
     }
+  }
     print QLA_SRC @indent,"\n";
     print QLA_SRC @indent,"$declaration\n";
     &open_brace();

@@ -42,6 +42,13 @@ die "Usage: $0 <prefix> <header_file> <c_source_path>\n" if $#ARGV < 2;
 # We allow the permutations DF -> FD and DQ -> QD, however.
 $target2 = $target; 
 
+# MOD_BUNDLE
+
+$target_original = $target ;
+$header_done=0 ;
+%func_name_debug  = () ;
+%func_name_detail = () ;
+
 if ($target2 =~ /DF/){$target =~ s/DF/FD/;}
 if ($target2 =~ /FD/){$target =~ s/FD/DF/;}
 
@@ -2702,9 +2709,36 @@ if($do_generic_defines ||
 &close_qla_header;
 ######################################################################
 
+if( defined $ENV{MOD_BUNDLE} )
+{
+ map {
+  my $func_name = $_ ;
+  my @d = @{$func_name_detail{$func_name}} ;
+  my $i = 0 ;
+  map {
+   printf "%8s %24s ", @{$_} ;
+   printf "%32s [%d]", $func_name, 0+@d if $i == 0 ;
+   printf "\n" ;
+   $i++ ;
+  } sort
+  { $a->[1] <=> $b->[1] } @d ;
+  printf "\n" ;
+ } sort keys %func_name_detail ;
+}
 
 ## copy specialized files
 use File::Copy;
+
+if( defined $ENV{MOD_BUNDLE} )
+{
+ use File::Path qw(mkpath) ;
+
+ my @d = split "/", $c_source_path ;
+ $tag = pop @d ;
+ $c_source_path_sans_tag = join "/", @d ;
+
+  mkpath "$c_source_path_sans_tag/specialized/$tag" ;
+}
 
 $codedir="$path/code-templates";
 
@@ -2753,7 +2787,14 @@ for($i=0; $i<=$#files; $i++) {
 #      printf("copyfile %s %s\n", $f, $t);
       $of = "QLA_${t}_$f";
       $fin = "$codedir/$f";
+     if( defined $ENV{MOD_BUNDLE} )
+     {
+      $fout = "$c_source_path_sans_tag/specialized/$tag/$of";
+     }
+     else
+     {
       $fout = "$c_source_path/$of";
+     }
       printf("copy %s %s\n", $fin, $fout);
       copy($fin,$fout) or die "Copy failed: $!";
     }

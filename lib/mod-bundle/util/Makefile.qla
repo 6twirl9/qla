@@ -1,0 +1,47 @@
+
+.SECONDEXPANSION:
+
+.PHONY: qla_source bundle clean
+
+mod := mod-bundle
+
+ifndef GSED
+ sed := sed
+else
+ sed := $(GSED)
+endif
+
+# === extract targets from Makefile.am -> QLA_SOURCE
+
+TARGET  := $(shell $(mod)/util/list_compiler_options.sh|awk '{print $$1"/"$$3;}')
+TARGET_ := $(shell $(mod)/util/list_compiler_options.sh|awk '{print $$1;}')
+
+QLA_SOURCE := $(addprefix $(mod)/src/, $(addsuffix .c, $(TARGET) ))
+
+#///
+
+bundle: $(QLA_SOURCE:.c=.c.pm)
+	@$(mod)/util/bundle-source-files.pl $(mod)/listing/{info.merged.pm,optimized,specialized}
+
+qla_source: $(QLA_SOURCE:.c=.c.pm)
+
+$(QLA_SOURCE:.c=.c.pm): $$(patsubst %.c.pm,%.c,$$@)
+	@perl/generate.sh $^ perl_data >& $(mod)/src/debug/$$(basename $@)
+$(QLA_SOURCE):
+	@perl/generate.sh $@ c_source >& $(mod)/src/debug/$$(basename $@)
+
+listing:
+	@echo $(QLA_SOURCE)
+	@echo
+	@echo TARGET: $(TARGET)
+	@echo
+	@for i in $(QLA_SOURCE) ; do					\
+	  perl/generate.sh $$i c_source show_generated_only  ;	\
+	 done
+
+clean:
+	@echo "Removing ... $(TARGET_)"
+	@rm -fr $(addprefix $(mod)/src/, $(TARGET_) ) $(mod)/src
+	@echo "Removing ... compiler_options  info.merged.pm  mangled  optimized  qla-makepp-cpp-opt.pm  specialized"
+	@rm -f $(mod)/listing/{compiler_options,info.merged.pm,mangled,optimized,qla-makepp-cpp-opt.pm,specialized}
+	
